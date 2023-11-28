@@ -1,0 +1,206 @@
+﻿@page "/"
+@model AimsSolutionTest.Pages.ProductModel
+@{
+    ViewData["Title"] = "Product Details";
+}
+
+<div class="row">
+    <div class="col-md-9">
+        <div class="card">
+            <div class="card-header d-flex">
+                <div class="col-9"><h4><b>Products</b></h4></div>
+                <div class="col-3 text-right"><a id="AddProduct" class="btn btn-primary btn-sm text-white" data-toggle="modal" data-target="#inputModal" onclick="modalOpen()">Add Product</a></div>
+            </div>
+            <div class="card-body">
+                <table id="productDetails" class="display table table-sm table-bordered table-hover">
+                    <thead class="bg-dark text-white">
+                        <tr>
+                            <th>Id</th>
+                            <th>Name</th>
+                            <th>Brand</th>
+                            <th>Price</th>
+                            <th>Quantity</th>
+                            <th>Decription</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="inputModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalCenterTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm" role="document">
+        <div class="modal-content">
+            <form id="productCreate" method="post">
+                <div class="modal-body">
+                    <input type="hidden" asp-for="product.Id" />
+                    <div class="col-12">
+                        <label asp-for="product.Name"></label>
+                        <input type="text" class="form-control" asp-for="product.Name" />
+                        <span class="alert-danger" asp-validation-for="product.Name"></span>
+                    </div>
+                    <div class="col-12">
+                        <label asp-for="product.Brand"></label>
+                        <input type="text" class="form-control" asp-for="product.Brand" />
+                        <span class="alert-danger" asp-validation-for="product.Brand"></span>
+                    </div>
+                    <div class="col-12">
+                        <label asp-for="product.Price"></label>
+                        <input type="text" class="form-control" asp-for="product.Price" />
+                        <span class="alert-danger" asp-validation-for="product.Price"></span>
+                    </div>
+                    <div class="col-12">
+                        <label asp-for="product.Quantity"></label>
+                        <input type="text" class="form-control" asp-for="product.Quantity" />
+                        <span class="alert-danger" asp-validation-for="product.Quantity"></span>
+                    </div>
+                    <div class="col-12">
+                        <label asp-for="product.Description"></label>
+                        <input type="text" class="form-control" asp-for="product.Description" />
+                        <span class="alert-danger" asp-validation-for="product.Description"></span>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal" onclick="modalClose()">Close</button>
+                    <button type="submit" class="btn btn-primary btn-sm">Save changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+
+<div class="modal fade" id="dialogModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalCenterTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <input type="hidden" id="prioduct_delete_id" />
+            <div class="modal-body">
+                Are you sure you want to delete?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">No</button>
+                <button type="button" class="btn btn-primary btn-sm" onclick="deleteSelectRow()">Yes</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+
+    /*$.validator.unobtrusive.parse(document);*/
+    var productList;
+
+    function modalOpen(){
+        $("#inputModal").modal("show");
+    }
+    function modalClose() {
+        $("#inputModal").modal("hide");
+    }
+
+    $(document).on('submit', '#productCreate', function (e) {
+        var form = $(this)
+        var data = form.serialize()
+        $.ajax({
+            type: "POST",
+            url: "?handler=Add",
+            beforeSend: function (xhr) {
+                xhr.setRequestHeader("XSRF-TOKEN", $("input:hidden[name='__RequestVerificationToken']").val())
+            },
+            data: data,
+            success: function (res) {
+                console.log(res)
+                if (res.isValid) {
+                    $("#inputModal").modal("hide");
+                    productList.ajax.reload();
+                }
+                else {
+                    console.log(res);
+                }
+            }
+        });
+        document.getElementById("productCreate").reset();
+        return false;
+    });
+
+    $(document).ready(function () {
+        GetList();
+    });
+
+    function GetList() {
+        productList = $("#productDetails").DataTable({
+            processing: true,
+            filter: true,
+            ajax: {
+                url: "?handler=ProductList",
+                type: "GET",
+                dataSrc: ''
+            },
+            columns: [
+                { data: "id", name: "Id", render: function (data) { return "<b>" + data + "</b>" } },
+                { data: "name", name: "Name", render: function (data) { return "<b>" + data + "</b>" } },
+                { data: "brand", name: "Brand", render: function (data) { return "<b>" + data + "</b>" } },
+                { data: "price", name: "Price", render: function (data) { return "<b>" + data + "</b>" } },
+                { data: "quantity", name: "Quantity", render: function (data) { return "<b>" + data + "</b>" } },
+                { data: "description", name: "description", render: function (data) { return "<b>" + data + "</b>" } },
+                {
+                    data: "id", "render": function (data) {
+                        return "<a class='btn btn-success btn-sm mr-2 text-white' onclick='editRow(" + data + ")'>Edit</a><a class='btn btn-danger btn-sm text-white' onclick='SelectdeleteRow(" + data + ")'>Delete</a>"
+                    },
+                    oderable: false,
+                    width: "100px"
+                },
+            ]
+        });
+    }
+
+    function editRow(id) {
+        document.getElementById("productCreate").reset();
+        $.ajax({
+            type: "GET",
+            url: "?handler=Product",
+            data: { id: id },
+            success: function (res) {
+                if (res.isSet == true) {
+                    console.log(res)
+                    $("#product_Id").val(res.product.id)
+                    $("#product_Name").val(res.product.name)
+                    $("#product_Brand").val(res.product.brand)
+                    $("#product_Price").val(res.product.price)
+                    $("#product_Quantity").val(res.product.quantity)
+                    $("#product_Description").val(res.product.description)
+                    $("#inputModal").modal("show");
+                }
+            }
+        });
+    }
+
+    function SelectdeleteRow(id) {
+        $("#dialogModal").modal('show')
+        $("#prioduct_delete_id").val(id)
+    }
+
+    function deleteSelectRow(){
+        var id = $("#prioduct_delete_id").val();
+        console.log(id)
+        $.ajax({
+            type: "POST",
+            beforeSend: function (xhr) {
+                xhr.setRequestHeader("XSRF-TOKEN", $('input:hidden[name="__RequestVerificationToken"]').val())
+            },
+            url: "?handler=Delete",
+            data: { id: id },
+            success: function (e) {
+                if(e.isDeleted == true){
+                    productList.ajax.reload();
+                }
+            }
+        });
+        $("#dialogModal").modal('hide')
+    }
+
+    
+
+</script>
